@@ -1191,11 +1191,34 @@ class ReaderInstance {
 				}
 			}
 		};
-		appendItems(popup, itemGroups);
-		let rect = this._iframe.getBoundingClientRect();
-		rect = this._window.windowUtils.toScreenRectInCSSUnits(rect.x + x, rect.y + y, 0, 0);
-		setTimeout(() => popup.openPopupAtScreen(rect.x, rect.y, true));
-	}
+               appendItems(popup, itemGroups);
+               let iframeRect = this._iframe.getBoundingClientRect();
+               let selection = this._iframeWindow.getSelection();
+               let rangeRect;
+               if (selection && selection.rangeCount) {
+                       rangeRect = selection.getRangeAt(0).getBoundingClientRect();
+               }
+               let rect = this._window.windowUtils.toScreenRectInCSSUnits(
+                       iframeRect.x + (rangeRect ? rangeRect.left : x),
+                       iframeRect.y + (rangeRect ? rangeRect.top : y),
+                       rangeRect ? rangeRect.width : 0,
+                       rangeRect ? rangeRect.height : 0
+               );
+               popup.addEventListener(
+                       'popupshown',
+                       () => {
+                               let popupRect = popup.getBoundingClientRect();
+                               let top = rect.y - popupRect.height - 5;
+                               if (top < 0) {
+                                       top = rect.y + rect.height + 5;
+                               }
+                               let left = rect.x + rect.width / 2 - popupRect.width / 2;
+                               popup.moveTo(left, top);
+                       },
+                       { once: true }
+               );
+               setTimeout(() => popup.openPopupAtScreen(rect.x, rect.y, true));
+        }
 
 	_handleReaderTextboxContextMenuOpen = (event) => {
 		this._window.goUpdateGlobalEditMenuItems(true);
